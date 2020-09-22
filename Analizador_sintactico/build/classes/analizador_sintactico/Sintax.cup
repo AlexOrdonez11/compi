@@ -1,0 +1,745 @@
+package analizador_sintactico;
+
+import java_cup.runtime.Symbol;
+
+parser code
+{:
+    public Symbol s;
+    public Node root;
+    
+    public void syntax_error(Symbol s){
+        this.s = s;
+    }
+
+    public Symbol getS(){
+        return this.s;
+}
+:};
+
+terminal 
+NEW_LINE,
+NUM,
+FUNCTION,
+ASSIGN,
+REL_OP,
+COMMA,
+LEFT_PARENTHESIS,
+RIGHT_PARENTHESIS,
+LEFT_BRACKET,
+RIGHT_BRACKET,
+LEFT_BRACE,
+RIGHT_BRACE,
+AND,
+OR,
+TYPE,
+ADD_OP,
+MULT_OP,
+EXP_OP,
+NOT,
+INPUT,
+OUTPUT,
+IF,
+OTHERWISE,
+LOOP,
+IN,
+NEXT,
+INIT_CODE_BLOCK,
+END_CODE_BLOCK,
+WHEN,
+DO,
+COLON,
+END,
+BOOL_VAL,
+CHR_VAL,
+ID
+;
+
+/*////////////////////////////////////*/
+
+non terminal 
+Statement,
+Function,
+Params,
+P,
+TypeDecl,
+RetType,
+Block,
+Instruction,
+InstLine,
+WhBlock,
+Declaration,
+Ciclo,
+MathExp,
+E,
+E2,
+E2P,
+T,
+T2,
+T2P,
+F,
+F2,
+K,
+KA,
+Array,
+SendParams,
+SendParams2,
+ArrayListP,
+ArrayList,
+ArrayOpt,
+ArrayOpt2,
+LogExp,
+RelExp,
+A,
+Val,
+GlobalValDecl,
+GlobValAssign,
+Other,
+VarActions,
+Begin
+; 
+
+start with Begin;
+
+Begin::= Statement:init
+           {:
+                parser.root=(Node)init;
+           :}
+;
+
+Statement::= 
+    Function: f Statement:s {:
+            Node funcion = new Node("Statement");
+            funcion.AddNode(f);
+            funcion.AddNode(s);
+            RESULT = funcion;
+        :}
+    | GlobalValDecl:g Statement:s {:
+            Node global = new Node("Statement");
+            global.AddNode(g);
+            global.AddNode(s);
+            RESULT = global;
+        :}
+    | NEW_LINE Statement: s {:
+            RESULT = (Node)s;
+        :}
+    |
+;
+
+//Declaracion de variables globales
+GlobalValDecl::= 
+      ID:id COLON:c A:a{:
+            Node decl= new Node("GlobValDecl");
+            decl.AddNode(new Node("ID",(String)id));
+            decl.AddNode(new Node("COLON",(String)c));
+            decl.AddNode(a);
+            RESULT = decl;
+        :}
+;
+
+//A define las acciones de declaracion e inicializacion
+A::= 
+    TypeDecl:t GlobValAssign:g {:
+            Node decl2= new Node("A");
+            decl2.AddNode(t);
+            decl2.AddNode(g);
+            RESULT = decl2;
+        :}
+        
+    | LEFT_BRACKET TYPE:t COMMA LogExp:le RIGHT_BRACKET {:
+            Node decl2= new Node("A");
+            decl2.AddNode(new Node("LEFT_BRACKET", "["));
+            decl2.AddNode(new Node("TYPE", (String)t));
+            decl2.AddNode(new Node("COMMA", ","));
+            decl2.AddNode(le);
+            decl2.AddNode(new Node("RIGHT_BRACKET", "]"));
+            RESULT = decl2;
+        :}
+        
+    | LEFT_BRACKET TYPE:t COMMA LogExp:le COMMA LogExp:le2 RIGHT_BRACKET {:
+            Node decl2= new Node("A");
+            decl2.AddNode(new Node("LEFT_BRACKET", "["));
+            decl2.AddNode(new Node("TYPE", (String)t));
+            decl2.AddNode(new Node("COMMA", ","));
+            decl2.AddNode(le);
+            decl2.AddNode(new Node("COMMA", ","));
+            decl2.AddNode(le2);
+            decl2.AddNode(new Node("RIGHT_BRACKET", "]"));
+            RESULT = decl2;
+        :}
+;
+
+//Define tipos declarables y asignables
+TypeDecl::= 
+    TYPE:t {:
+            Node typedec= new Node("TypeDecl");
+            typedec.AddNode(new Node ("TYPE", (String)t));
+            RESULT = typedec;
+        :}
+    | LEFT_BRACKET TYPE:t RIGHT_BRACKET {: 
+            Node typedec= new Node("TypeDecl");
+            typedec.AddNode(new Node ("LEFT_BRACKET", "["));
+            typedec.AddNode(new Node ("TYPE", (String)t));
+            typedec.AddNode(new Node ("RIGHT_BRACKET", "]"));
+            RESULT = typedec;
+        :}
+    | LEFT_BRACKET LEFT_BRACKET TYPE:t RIGHT_BRACKET RIGHT_BRACKET {: 
+            Node typedec= new Node("TypeDecl");
+            typedec.AddNode(new Node ("LEFT_BRACKET", "["));
+            typedec.AddNode(new Node ("LEFT_BRACKET", "["));
+            typedec.AddNode(new Node ("TYPE", (String)t));
+            typedec.AddNode(new Node ("RIGHT_BRACKET", "]"));
+            typedec.AddNode(new Node ("RIGHT_BRACKET", "]"));
+            RESULT = typedec;
+        :}
+;
+
+//Asignacion de valor
+GlobValAssign::= 
+    ASSIGN:a LogExp:le {:
+            Node globas= new Node("GlobValAssign");
+            globas.AddNode(new Node("ASSIGN","<="));
+            globas.AddNode(le);
+            RESULT = globas;
+        :}
+    | ;
+
+
+
+Function::= 
+    FUNCTION:f ID:id LEFT_PARENTHESIS Params:p RIGHT_PARENTHESIS RetType:r INIT_CODE_BLOCK:i Block:b {:
+            Node fun= new Node("Funcion");
+            fun.AddNode(new Node("FUNCTION", "fun"));
+            fun.AddNode(new Node("ID", (String)id ));
+            fun.AddNode(new Node("LEFT_PARENTHESIS","("));
+            fun.AddNode(p);
+            fun.AddNode(new Node("RIGHT_PARENTHESIS", ")"));
+            fun.AddNode(r);
+            fun.AddNode(new Node("INIT_CODE_BLOCK", "->"));
+            fun.AddNode(b);
+            RESULT = fun;
+        :}
+    /*|FUNCTION ID LEFT_PARENTHESIS Params RIGHT_PARENTHESIS RetType INIT_CODE_BLOCK Block Statement*/
+;
+RetType::= 
+    COLON TypeDecl:t {:
+            Node returnt= new Node("RetType");
+            returnt.AddNode(new Node("COLON",":"));
+            returnt.AddNode(t);
+            RESULT = returnt;
+        :}
+    | 
+;
+Params::= 
+    P:p COMMA:c Params:pa {:
+            Node params= new Node("Params");
+            params.AddNode(p);
+            params.AddNode(new Node("COMMA",","));
+            params.AddNode(pa);
+            RESULT = params;
+        :}
+    | P:p {:
+            Node params= new Node("Params");
+            params.AddNode(p);
+            RESULT = params;
+        :}
+    |
+;
+P::= 
+    ID:id COLON:c TypeDecl:t {:
+            Node p= new Node("P");
+            p.AddNode(new Node ("ID", (String)id));
+            p.AddNode(new Node ("COLON", ":" ));
+            RESULT = p;
+        :}
+;
+Block::= 
+    Instruction:i Block:b {:
+            Node block= new Node("Block");
+            block.AddNode(i);
+            block.AddNode(b);
+            RESULT = block;
+        :}
+    | Instruction:i END_CODE_BLOCK {:
+            Node block= new Node("Block");
+            block.AddNode(i);
+            block.AddNode(new Node("END_CODE_BLOCK","<."));
+            RESULT = block;
+        :}
+    | InstLine:in END_CODE_BLOCK {:
+            Node block= new Node("Block");
+            block.AddNode(in);
+            block.AddNode(new Node("END_CODE_BLOCK","<."));
+            RESULT = block;
+        :}
+    | NEW_LINE Block
+    | NEW_LINE END_CODE_BLOCK
+;
+Instruction::= 
+    InstLine:in NEW_LINE {:
+            Node instruction= new Node("Instruction");
+            instruction.AddNode(in);
+            instruction.AddNode(new Node("NEW_LINE","\n"));
+            RESULT = instruction;
+        :}
+    | LOOP ID:id IN LogExp:le COLON LogExp:le1 COLON LogExp:le2 INIT_CODE_BLOCK Block:b {:
+            Node instruction= new Node("Instruction");
+            instruction.AddNode(new Node("LOOP","loop"));
+            instruction.AddNode(new Node("ID",(String)id));
+            instruction.AddNode(new Node("IN","in"));
+            instruction.AddNode(le);
+            instruction.AddNode(new Node("COLON",":"));
+            instruction.AddNode(le1);
+            instruction.AddNode(new Node("COLON",":"));
+            instruction.AddNode(le2);
+            instruction.AddNode(new Node("INIT_CODE_BLOCK","->"));
+            instruction.AddNode(b);
+            RESULT = instruction;
+        :} 
+    | WHEN LogExp:le INIT_CODE_BLOCK WhBlock:whb END_CODE_BLOCK {:
+            Node instruction= new Node("Instruction");
+            instruction.AddNode(new Node("WHEN","when"));
+            instruction.AddNode(le);
+            instruction.AddNode(new Node("INIT_CODE_BLOCK","->"));
+            instruction.AddNode(whb);
+            instruction.AddNode(new Node("END_CODE_BLOCK","<."));
+            RESULT = instruction;
+        :} 
+    | IF LEFT_PARENTHESIS LogExp:le RIGHT_PARENTHESIS Ciclo:c INIT_CODE_BLOCK Block:b Other:o {:
+            Node instruction= new Node("Instruction");
+            instruction.AddNode(new Node("IF","if"));
+            instruction.AddNode(new Node("LEFT_PARENTHESIS","("));
+            instruction.AddNode(le);
+            instruction.AddNode(new Node("RIGHT_PARENTHESIS", ")"));
+            instruction.AddNode(c);
+            instruction.AddNode(new Node("INIT_CODE_BLOCK","->"));
+            instruction.AddNode(b);
+            instruction.AddNode(o);
+            RESULT = instruction;
+        :} 
+;
+
+Ciclo::= 
+    COLON LOOP {:
+            Node ciclo= new Node("Ciclo");
+            ciclo.AddNode(new Node("COLON",":"));
+            ciclo.AddNode(new Node("LOOP","loop"));
+            RESULT = ciclo;
+        :}
+    | 
+;
+Other::= OTHERWISE IF LEFT_PARENTHESIS LogExp:le RIGHT_PARENTHESIS INIT_CODE_BLOCK Block:b  Other:o {:
+            Node other = new Node("Other");
+            other.AddNode(new Node("OTHERWISE","otherwise"));
+            other.AddNode(new Node("IF","if"));
+            other.AddNode(new Node("LEFT_PARENTHESIS","("));
+            other.AddNode(le);
+            other.AddNode(new Node("RIGHT_PARENTHESIS",")"));
+            other.AddNode(new Node("INIT_CODE_BLOCK","->"));
+            other.AddNode(b);
+            other.AddNode(o);
+            RESULT = other;
+        :}
+    | OTHERWISE INIT_CODE_BLOCK Block:b {:
+            Node other = new Node("Other");
+            other.AddNode(new Node("OTHERWISE","otherwise"));
+            other.AddNode(new Node("INIT_CODE_BLOCK","->"));
+            other.AddNode(b);
+            RESULT = other;
+        :} 
+    | 
+;   
+WhBlock::= 
+    LogExp:le DO COLON INIT_CODE_BLOCK Block:b WhBlock:wh {:
+            Node whb = new Node("WhBlock");
+            whb.AddNode(le);
+            whb.AddNode(new Node("DO","do"));
+            whb.AddNode(new Node("COLON",":"));
+            whb.AddNode(new Node("INIT_CODE_BLOCK","->"));
+            whb.AddNode(b);
+            whb.AddNode(wh);
+            RESULT = whb;
+        :}
+    | LogExp:le DO COLON INIT_CODE_BLOCK Block:b {:
+            Node whb = new Node("WhBlock");
+            whb.AddNode(le);
+            whb.AddNode(new Node("DO","do"));
+            whb.AddNode(new Node("COLON",":"));
+            whb.AddNode(new Node("INIT_CODE_BLOCK","->"));
+            whb.AddNode(b);
+            RESULT = whb;
+        :}
+    | DO COLON INIT_CODE_BLOCK Block:b {:
+            Node whb = new Node("WhBlock");
+            whb.AddNode(new Node("DO","do"));
+            whb.AddNode(new Node("COLON",":"));
+            whb.AddNode(new Node("INIT_CODE_BLOCK","->"));
+            whb.AddNode(b);
+            RESULT = whb;
+        :} 
+;
+InstLine::= 
+    END {:
+            Node instLine = new Node("InstLine");
+            instLine.AddNode(new Node("END","end"));
+            RESULT = instLine;
+        :} 
+    | LEFT_BRACE LogExp:le RIGHT_BRACE {:
+            Node instLine = new Node("InstLine");
+            instLine.AddNode(new Node("LEFT_BRACE","["));
+            instLine.AddNode(le);
+            instLine.AddNode(new Node("RIGHT_BRACE","]"));
+            RESULT = instLine;
+        :} 
+    | ID:id VarActions:va {:
+            Node instLine = new Node("InstLine");
+            instLine.AddNode(new Node("ID",(String)id));
+            instLine.AddNode(va);
+            RESULT = instLine;
+        :} 
+    | NEXT {:
+            Node instLine = new Node("InstLine");
+            instLine.AddNode(new Node("NEXT","next"));
+            RESULT = instLine;
+        :}
+    | OUTPUT LogExp:le {:
+            Node instLine = new Node("InstLine");
+            instLine.AddNode(new Node("OUTPUT","output"));
+            instLine.AddNode(le);
+            RESULT = instLine;
+        :}
+    | INPUT ID:id ArrayOpt:ao {:
+            Node instLine = new Node("InstLine");
+            instLine.AddNode(new Node("INPUT","input"));
+            instLine.AddNode(new Node("ID",(String)id));
+            instLine.AddNode(ao);
+            RESULT = instLine;
+        :}
+    | INPUT ID:id COLON TYPE:t {:
+            Node instLine = new Node("InstLine");
+            instLine.AddNode(new Node("INPUT","input"));
+            instLine.AddNode(new Node("ID",(String)id));
+            instLine.AddNode(new Node("COLON",":"));
+            instLine.AddNode(new Node("TYPE",(String)t));
+            RESULT = instLine;
+        :}
+;
+
+VarActions::= 
+    COLON Declaration:d {:
+            Node vara= new Node("VarActions");
+            vara.AddNode(new Node("COLON",":"));
+            vara.AddNode(d);
+            RESULT = vara;
+        :} 
+    | ArrayOpt:ao ASSIGN LogExp:le {:
+            Node vara= new Node("VarActions");
+            vara.AddNode(ao);
+            vara.AddNode(new Node("ASSIGN","<="));
+            vara.AddNode(le);
+            RESULT = vara;
+        :} 
+    | LEFT_PARENTHESIS SendParams:sp RIGHT_PARENTHESIS {:
+            Node vara= new Node("VarActions");
+            vara.AddNode(new Node("LEFT_PARENTHESIS","("));
+            vara.AddNode(sp);
+            vara.AddNode(new Node("RIGHT_PARENTHESIS",")"));
+            RESULT = vara;
+        :} 
+;
+Declaration::= 
+    TypeDecl:td {:
+            Node decl= new Node("Declaration");
+            decl.AddNode(td);
+            RESULT = decl;
+        :}
+    | TypeDecl:td ASSIGN LogExp:le {:
+            Node decl= new Node("Declaration");
+            decl.AddNode(td);
+            decl.AddNode(new Node("ASSIGN","<="));
+            decl.AddNode(le);
+            RESULT = decl;
+        :}
+    | LEFT_BRACKET TYPE:t COMMA LogExp:le RIGHT_BRACKET {:
+            Node decl= new Node("Declaration");
+            decl.AddNode(new Node("LEFT_BRACKET", "["));
+            decl.AddNode(new Node("TYPE", (String)t));
+            decl.AddNode(new Node("COMMA", ","));
+            decl.AddNode(le);
+            decl.AddNode(new Node("RIGHT_BRACKET", "]"));
+            RESULT = decl;
+        :} 
+    | LEFT_BRACKET TYPE:t COMMA LogExp:le COMMA LogExp:le2 RIGHT_BRACKET {:
+            Node decl= new Node("Declaration");
+            decl.AddNode(new Node("LEFT_BRACKET", "["));
+            decl.AddNode(new Node("TYPE", (String)t));
+            decl.AddNode(new Node("COMMA", ","));
+            decl.AddNode(le);
+            decl.AddNode(new Node("COMMA", ","));
+            decl.AddNode(le2);
+            decl.AddNode(new Node("RIGHT_BRACKET", "]"));
+            RESULT = decl;
+        :}
+;
+
+SendParams::= 
+    SendParams2:sp2 {:
+            Node sendpar= new Node("SendParams");
+            sendpar.AddNode(sp2);
+            RESULT = sendpar;
+        :} 
+    | 
+;
+SendParams2::=
+    LogExp:le COMMA SendParams2:sp2 {:
+            Node sendpar2= new Node("SendParams2");
+            sendpar2.AddNode(le);
+            sendpar2.AddNode(new Node("COMMA",","));
+            sendpar2.AddNode(sp2);
+            RESULT = sendpar2;
+        :} 
+    
+    | LogExp:le {:
+            Node sendpar2= new Node("SendParams2");
+            sendpar2.AddNode(le);
+            RESULT = sendpar2;
+        :}
+;
+
+ArrayOpt::= 
+    LEFT_BRACKET LogExp:le ArrayOpt2:ao2 {:
+            Node arrop= new Node("ArrayOpt");
+            arrop.AddNode(new Node("LEFT_BRACKET","["));
+            arrop.AddNode(le);
+            arrop.AddNode(ao2);
+            RESULT = arrop;
+        :}
+    | ;
+ArrayOpt2::=
+    RIGHT_BRACKET {:
+            Node arrop2= new Node("ArrayOpt2");
+            arrop2.AddNode(new Node("RIGHT_BRACKET","]"));
+            RESULT = arrop2;
+        :} 
+    | COMMA LogExp:le RIGHT_BRACKET {:
+            Node arrop2= new Node("ArrayOpt2");
+            arrop2.AddNode(new Node("COMMA",","));
+            arrop2.AddNode(le);
+            arrop2.AddNode(new Node("RIGHT_BRACKET","]"));
+            RESULT = arrop2;
+        :}
+;
+Array::= 
+    LEFT_BRACKET ArrayList:al RIGHT_BRACKET  {:
+            Node arr= new Node("Array");
+            arr.AddNode(new Node("LEFT_BRACKET","["));
+            arr.AddNode(al);
+            arr.AddNode(new Node("RIGHT_BRACKET","]"));
+            RESULT = arr;
+        :}
+;
+ArrayList::= 
+    LogExp:le ArrayListP:alp {:
+            Node arrlist= new Node("ArrayList");
+            arrlist.AddNode(le);
+            arrlist.AddNode(alp);
+            RESULT = arrlist;
+        :}
+;
+ArrayListP::=
+    COMMA LogExp:le ArrayListP:alp {:
+            Node arrlistp= new Node("ArrayListP");
+            arrlistp.AddNode(new Node("COMMA",","));
+            arrlistp.AddNode(le);
+            arrlistp.AddNode(alp);
+            RESULT = arrlistp;
+        :}
+    |
+;
+
+/*Define Operaciones Logicas*/
+LogExp::= E2:e2 {:
+            Node log= new Node("LogExp");
+            log.AddNode(e2);
+            RESULT = log;
+        :}
+;
+E2::= T2:t2 E2P:e2p {:
+            Node e2= new Node("E2");
+            e2.AddNode(t2);
+            e2.AddNode(e2p);
+            RESULT = e2p;
+        :}
+;
+E2P::= OR T2:t2 E2P:e2p2 {:
+            Node e2p= new Node("E2P");
+            e2p.AddNode(new Node("OR","or"));
+            e2p.AddNode(t2);
+            e2p.AddNode(e2p2);
+            RESULT = e2p;
+        :} 
+    | ; 
+T2::= F2:f2 T2P:t2p {:
+            Node t2= new Node("T2");
+            t2.AddNode(f2);
+            t2.AddNode(t2p);
+            RESULT = t2;
+        :} 
+;
+T2P::= AND F2:f2 T2P:t2p2 {:
+            Node t2p= new Node("T2P");
+            t2p.AddNode(f2);
+            t2p.AddNode(t2p2);
+            RESULT = t2p;
+        :} 
+    | ;
+F2::= NOT RelExp:re {:
+            Node f2= new Node("F2");
+            f2.AddNode(new Node("NOT","not"));
+            f2.AddNode(re);
+            RESULT = f2;
+        :}  
+    | RelExp:re {:
+            Node f2= new Node("F2");
+            f2.AddNode(re);
+            RESULT = f2;
+        :}
+;
+
+/*Define Operaciones Logicas*/
+RelExp::= 
+    MathExp:me REL_OP:ro MathExp:me2 {:
+            Node re= new Node("RelExp");
+            re.AddNode(me);
+            re.AddNode(new Node("REL_OP",(String)ro));
+            re.AddNode(me2);
+            RESULT = re;
+        :}
+    | MathExp:me {:
+            Node re= new Node("RelExp");
+            re.AddNode(me);
+            RESULT = re;
+        :}
+;
+
+/*Define Operaciones Matematicas*/
+MathExp::= E:e {:
+            Node math= new Node("MathExp");
+            math.AddNode(e);
+            RESULT = math;
+        :}
+;
+
+E::= E:e1 ADD_OP:ao T:t{:
+            Node e= new Node("E");
+            e.AddNode(e1);
+            e.AddNode(new Node("ADD_OP", "(String)ao"));
+            e.AddNode(t);
+            RESULT = e;
+        :}  
+    | T:t {:
+            Node e= new Node("E");
+            e.AddNode(t);
+            RESULT = e;
+        :}
+;
+
+T::= T:t1 MULT_OP:mo F:f {:
+            Node t= new Node("T");
+            t.AddNode(t1);
+            t.AddNode(new Node("MULT_OP", "(String)mo"));
+            t.AddNode(f);
+            RESULT = t;
+        :}
+    | F:f {:
+            Node t= new Node("T");
+            t.AddNode(f);
+            RESULT = t;
+        :}
+;
+F::= F:f1 EXP_OP:eo K:k {:
+            Node f= new Node("F");
+            f.AddNode(f1);
+            f.AddNode(new Node("EXP_OP", "(String)eo"));
+            f.AddNode(k);
+            RESULT = f;
+        :} 
+    | K:k {:
+            Node f= new Node("F");
+            f.AddNode(k);
+            RESULT = f;
+        :}
+;
+K::= Val:v {:
+            Node k= new Node("K");
+            k.AddNode(v);
+            RESULT = k;
+        :}
+    | LEFT_PARENTHESIS LogExp:le RIGHT_PARENTHESIS {:
+            Node k= new Node("K");
+            k.AddNode(new Node("LEFT_PARENTHESIS","("));
+            k.AddNode(le);
+            k.AddNode(new Node("RIGHT_PARENTHESIS",")"));
+            RESULT = k;
+        :}
+    | ADD_OP:ao KA:ka {:
+            Node k= new Node("K");
+            k.AddNode(new Node("ADD_OP",(String)ao));
+            k.AddNode(ka);
+            RESULT = k;
+        :}
+;
+    
+KA::= ADD_OP:ao KA:ka2 {:
+            Node ka= new Node("KA");
+            ka.AddNode(new Node("ADD_OP",(String)ao));
+            ka.AddNode(ka2);
+            RESULT = ka;
+        :}
+    | Val:v {:
+            Node ka= new Node("KA");
+            ka.AddNode(v);
+            RESULT = ka;
+        :}
+    | LEFT_PARENTHESIS LogExp:le RIGHT_PARENTHESIS {:
+            Node ka= new Node("KA");
+            ka.AddNode(new Node("LEFT_PARENTHESIS","("));
+            ka.AddNode(le);
+            ka.AddNode(new Node("RIGHT_PARENTHESIS",")"));
+            RESULT = ka;
+        :}
+;
+
+Val::= Array:a{:
+            Node val= new Node("Val");
+            val.AddNode(a);
+            RESULT = val;
+        :}
+    | CHR_VAL:c {:
+            Node val= new Node("Val");
+            val.AddNode(new Node("CHR_VAL",(String)c));
+            RESULT = val;
+        :} 
+    | NUM:n {:
+            Node val= new Node("Val");
+            val.AddNode(new Node("NUM",(String)n));
+            RESULT = val;
+        :} 
+    | BOOL_VAL:b {:
+            Node val= new Node("Val");
+            val.AddNode(new Node("BOOL_VAL",(String)b));
+            RESULT = val;
+        :} 
+    | ID:id ArrayOpt:ao {:
+            Node val= new Node("Val");
+            val.AddNode(new Node("ID",(String)id));
+            RESULT = val;
+        :} 
+    | ID:id LEFT_PARENTHESIS SendParams:sp RIGHT_PARENTHESIS {:
+            Node val= new Node("Val");
+            val.AddNode(new Node("ID",(String)id));
+            val.AddNode(new Node("LEFT_PARENTHESIS","("));
+            val.AddNode(sp);
+            val.AddNode(new Node("RIGHT_PARENTHESIS",")"));
+            RESULT = val;
+        :}
+;
