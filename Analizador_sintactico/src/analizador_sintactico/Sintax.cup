@@ -279,7 +279,7 @@ Block::=
         {:
             Node block= new Node("Block");
             block.AddNode(new Node("END_CODE_BLOCK","<."));
-            RESULT = (Node)b;
+            RESULT = (Node)block;
         :}
 ;
 Instruction::= 
