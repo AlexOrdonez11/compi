@@ -271,8 +271,16 @@ Block::=
             block.AddNode(new Node("END_CODE_BLOCK","<."));
             RESULT = block;
         :}
-    | NEW_LINE Block
+    | NEW_LINE Block:b {:
+            RESULT = (Node)b;
+        :}
+            
     | NEW_LINE END_CODE_BLOCK
+        {:
+            Node block= new Node("Block");
+            block.AddNode(new Node("END_CODE_BLOCK","<."));
+            RESULT = (Node)b;
+        :}
 ;
 Instruction::= 
     InstLine:in NEW_LINE {:
